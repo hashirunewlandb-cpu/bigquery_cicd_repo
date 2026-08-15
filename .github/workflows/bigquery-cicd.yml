@@ -1,0 +1,39 @@
+name: BigQuery Keyless CI/CD
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+
+# Crucial: These permissions are required to request the OIDC JWT token from GitHub
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  bigquery-test:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Check out your SQL scripts or code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Authenticate securely using Workload Identity Federation
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      # 3. Setup the gcloud / bq CLI tools
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # 4. Test run a query or deploy a schema to BigQuery
+      - name: Dry Run BigQuery SQL
+        run: |
+          bq query --use_legacy_sql=false --dry_run 'SELECT CURRENT_TIMESTAMP() AS current_time;'
